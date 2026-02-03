@@ -21,4 +21,4 @@ jobs:
         run: docker tag  billsoft/github-action-practice billsoft/github-action-practice:latest 
 
       - name: Push Docker image
-        run: docker push billsof/github-action-practice
+        run:  docker push billsoft/github-action-practice:latest
