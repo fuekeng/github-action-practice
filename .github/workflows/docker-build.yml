@@ -19,4 +19,4 @@ jobs:
         run: docker build -t billsoft/app:latest .
 
       - name: Push Docker image
-        run: docker push billsof/app:latest
+        run: docker push billsof/app:latest 
