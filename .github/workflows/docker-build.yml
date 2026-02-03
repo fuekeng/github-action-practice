@@ -19,6 +19,6 @@ jobs:
 
       - name: Build and push
         run: |
-          echo ${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}:latest
+          echo ${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}
           docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}:latest .
           docker push ${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}:latest
