@@ -1,89 +1,21 @@
-name: Build and Push Docker Image
+name: Docker Build and Push
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*'
-  pull_request:
-    branches:
-      - main
-
-env:
-  REGISTRY: docker.io
-  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/nodejs-api
+    branches: [ main ]
 
 jobs:
-  build-and-push:
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+  docker:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    environment: docker
-    
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Log in to Docker Hub
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-      
-      - name: Build and push Docker image
-        if: github.ref == 'refs/heads/main'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      
-      - name: Delete old images from Docker Hub
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          echo "Deleting old images from Docker Hub..."
-          TOKEN=$(curl -s -X POST https://hub.docker.com/v2/users/login \
-            -H "Content-Type: application/json" \
-            -d "{\"username\": \"${{ secrets.DOCKER_USERNAME }}\", \"password\": \"${{ secrets.DOCKER_PASSWORD }}\"}" \
-            | jq -r '.token')
-          
-          # Delete 'latest' tag if it exists
-          curl -s -X DELETE https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/nodejs-api/tags/latest/ \
-            -H "Authorization: JWT $TOKEN" || echo "Tag 'latest' not found or already deleted"
-          
-          # Delete 'main' tag if it exists
-          curl -s -X DELETE https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/nodejs-api/tags/main/ \
-            -H "Authorization: JWT $TOKEN" || echo "Tag 'main' not found or already deleted"
-          
-          echo "Old images cleanup completed"
-      
-      - name: Update Docker Hub Description
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: peter-evans/dockerhub-description@v4
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          repository: ${{ env.IMAGE_NAME }}
-          short-description: ${{ github.event.repository.description }}
-          readme-filepath: ./README.md
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/app:latest .
+
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/app:latest
